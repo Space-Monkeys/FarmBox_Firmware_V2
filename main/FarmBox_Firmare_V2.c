@@ -116,56 +116,6 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
-static void http_rest_with_hostname_path(void)
-{
-    esp_http_client_config_t config = {
-        .host = "httpbin.org",
-        .path = "/get",
-        .transport_type = HTTP_TRANSPORT_OVER_TCP,
-        .event_handler = _http_event_handler,
-    };
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-
-    // GET
-    esp_err_t err = esp_http_client_perform(client);
-    if (err == ESP_OK)
-    {
-        ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %d",
-                 esp_http_client_get_status_code(client),
-                 esp_http_client_get_content_length(client));
-    }
-    else
-    {
-        ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(err));
-    }
-
-    // POST
-    const char *post_data = "field1=value1&field2=value2";
-    esp_http_client_set_url(client, "/post");
-    esp_http_client_set_method(client, HTTP_METHOD_POST);
-    esp_http_client_set_post_field(client, post_data, strlen(post_data));
-    err = esp_http_client_perform(client);
-    if (err == ESP_OK)
-    {
-        ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %d",
-                 esp_http_client_get_status_code(client),
-                 esp_http_client_get_content_length(client));
-    }
-    else
-    {
-        ESP_LOGE(TAG, "HTTP POST request failed: %s", esp_err_to_name(err));
-    }
-
-    esp_http_client_cleanup(client);
-}
-
-static void http_test_task(void *pvParameters)
-{
-    http_rest_with_hostname_path();
-
-    ESP_LOGI(TAG, "Finish http example");
-    vTaskDelete(NULL);
-}
 void tds_task(void *pvParameters)
 {
     ESP_LOGI(TDS, "TDS Measurement Control Task: Starting");
@@ -239,11 +189,14 @@ void DHT_task(void *pvParameter)
 void PH_Task(void *pvParameter)
 {
     ESP_LOGI(TDS, "Water Measurement Control Task: PH Sensor");
+    config_ph_pins();
     while (1)
     {
 
         ESP_LOGI(PH_TAG, "======== Reading Sensor ========");
-        calibration();
+        float sensorReading = read_ph_sensor(25, 20);
+        ESP_LOGW(TDS, "PH Reading = %f", sensorReading);
+        //ph_calibration(200, 100);
         vTaskDelay(3000 / portTICK_RATE_MS);
     }
 }
@@ -268,7 +221,7 @@ void app_main(void)
     ESP_ERROR_CHECK(example_connect());
     ESP_LOGI(TAG, "Connected to AP, begin http example");
     //xTaskCreate(&http_test_task, "http_test_task", 8192, NULL, 5, NULL);
-    //xTaskCreate(&tds_task, "tds_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&tds_task, "tds_task", 2048, NULL, 5, NULL);
     //xTaskCreate(&DHT_task, "DHT_task", 2048, NULL, 5, NULL);
     xTaskCreate(&PH_Task, "PH_Task", 2048, NULL, 5, NULL);
 }

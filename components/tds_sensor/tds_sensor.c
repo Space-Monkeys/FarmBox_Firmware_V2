@@ -14,7 +14,7 @@
 #include "esp_log.h"
 
 #define TDS_ENABLE_GPIO GPIO_NUM_32    //Note: Power from GPIO is 12mA, board requires 3~6mA, so enable pin powers board
-#define TDS_ANALOG_GPIO ADC1_CHANNEL_6 //ADC1 is availalbe on pins 15, 34, 35 & 36
+#define TDS_ANALOG_GPIO ADC1_CHANNEL_7 //ADC1 is availalbe on pins 15, 34, 35 & 36
 
 #define TDS_STABILISATION_DELAY 10 //(int) How long to wait (in seconds) after enabling sensor before taking a reading
 #define TDS_NUM_SAMPLES 10         //(int) Number of reading to take for an average   //(int) Sample period (delay between samples == sample period / number of readings)
@@ -65,7 +65,7 @@ float read_tds_sensor(int numSamples, float sampleDelay)
     {
         // Read analogue value
         int analogSample = adc1_get_raw(TDS_ANALOG_GPIO);
-        ESP_LOGI(TDS, "Read analog value %d then sleep for %f milli seconds.", analogSample, sampleDelay);
+        //ESP_LOGI(TDS, "Read analog value %d then sleep for %f milli seconds.", analogSample, sampleDelay);
         runningSampleValue = runningSampleValue + analogSample;
         vTaskDelay(sampleDelay / portTICK_PERIOD_MS);
     }
