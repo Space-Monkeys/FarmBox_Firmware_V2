@@ -84,7 +84,12 @@
         "xlocmon": "cpp",
         "xloctime": "cpp",
         "xtree": "cpp",
-        "gpio.h": "c"
+        "gpio.h": "c",
+        "task.h": "c",
+        "mkrequests.h": "c",
+        "esp_netif.h": "c",
+        "esp_wpa2.h": "c",
+        "esp_system.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
     
