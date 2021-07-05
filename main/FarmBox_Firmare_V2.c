@@ -22,12 +22,14 @@
 #include "tds_sensor.h"
 #include "DHT22.h"
 #include "esp_http_client.h"
+#include "ph_sensor.h"
 
 #define MAX_HTTP_RECV_BUFFER 512
 #define MAX_HTTP_OUTPUT_BUFFER 2048
 static const char *TAG = "HTTP_CLIENT";
 static const char *TDS = "TDS_SENSOR";
 static const char *DHT_TAG = "DHT_SENSOR";
+static const char *PH_TAG = "PH_SENSOR";
 
 #define TDS_NUM_SAMPLES 3
 #define TDS_SAMPLE_PERIOD 20
@@ -234,6 +236,17 @@ void DHT_task(void *pvParameter)
         vTaskDelay(3000 / portTICK_RATE_MS);
     }
 }
+void PH_Task(void *pvParameter)
+{
+    ESP_LOGI(TDS, "Water Measurement Control Task: PH Sensor");
+    while (1)
+    {
+
+        ESP_LOGI(PH_TAG, "======== Reading Sensor ========");
+        calibration();
+        vTaskDelay(3000 / portTICK_RATE_MS);
+    }
+}
 
 void app_main(void)
 {
@@ -254,7 +267,8 @@ void app_main(void)
      */
     ESP_ERROR_CHECK(example_connect());
     ESP_LOGI(TAG, "Connected to AP, begin http example");
-    //  xTaskCreate(&http_test_task, "http_test_task", 8192, NULL, 5, NULL);
-    xTaskCreate(&tds_task, "tds_task", 2048, NULL, 5, NULL);
-    xTaskCreate(&DHT_task, "DHT_task", 2048, NULL, 5, NULL);
+    //xTaskCreate(&http_test_task, "http_test_task", 8192, NULL, 5, NULL);
+    //xTaskCreate(&tds_task, "tds_task", 2048, NULL, 5, NULL);
+    //xTaskCreate(&DHT_task, "DHT_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&PH_Task, "PH_Task", 2048, NULL, 5, NULL);
 }
