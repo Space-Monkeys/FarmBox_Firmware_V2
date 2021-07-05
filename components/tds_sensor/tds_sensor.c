@@ -70,7 +70,7 @@ float read_tds_sensor(int numSamples, float sampleDelay)
         vTaskDelay(sampleDelay / portTICK_PERIOD_MS);
     }
 
-    float tdsAverage = runningSampleValue / TDS_NUM_SAMPLES;
+    float tdsAverage = runningSampleValue / numSamples;
     ESP_LOGI(TDS, "Calculated average = %f", tdsAverage);
     return tdsAverage;
 }
