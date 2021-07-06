@@ -13,7 +13,7 @@
 #include "driver/adc.h"
 #include "esp_log.h"
 
-#define TDS_ANALOG_GPIO ADC1_CHANNEL_6 //ADC1 is availalbe on pins 15, 34, 35 & 36
+#define PH_ANALOG_GPIO ADC1_CHANNEL_6 //ADC1 is availalbe on pins 15, 34, 35 & 36
 static const char *PH_SENSOR = "PH SENSOR INFO";
 
 void config_ph_pins()
@@ -21,7 +21,7 @@ void config_ph_pins()
     ESP_LOGI(PH_SENSOR, "Configure pins required for PH sensor.");
     // Pin to read the TDS sensor analog output
     adc1_config_width(ADC_WIDTH_BIT_12);
-    adc1_config_channel_atten(TDS_ANALOG_GPIO, ADC_ATTEN_DB_11);
+    adc1_config_channel_atten(PH_ANALOG_GPIO, ADC_ATTEN_DB_11);
 }
 
 void ph_calibration(int numSamples, float samplePeriod)
@@ -31,7 +31,7 @@ void ph_calibration(int numSamples, float samplePeriod)
     ESP_LOGI(PH_SENSOR, "================== PH Calibration Mode ================== ");
     for (int i = 0; i < numSamples; i++)
     {
-        int analogSample = adc1_get_raw(TDS_ANALOG_GPIO);
+        int analogSample = adc1_get_raw(PH_ANALOG_GPIO);
         ESP_LOGI(PH_SENSOR, "Read analog value %d then sleep for %f milli seconds.", analogSample, sampleDelay);
         runningSampleValue = runningSampleValue + analogSample;
         vTaskDelay(sampleDelay / portTICK_PERIOD_MS);
@@ -52,14 +52,14 @@ float read_ph_sensor(int numSamples, float samplePeriod)
     for (int i = 0; i < numSamples; i++)
     {
         // Read analogue value
-        int analogSample = adc1_get_raw(TDS_ANALOG_GPIO);
+        int analogSample = adc1_get_raw(PH_ANALOG_GPIO);
         //ESP_LOGI(PH_SENSOR, "Read analog value %d then sleep for %f milli seconds.", analogSample, sampleDelay);
         runningSampleValue = runningSampleValue + analogSample;
         vTaskDelay(sampleDelay / portTICK_PERIOD_MS);
     }
 
     float tdsAverage = (runningSampleValue / numSamples) * (3.3 / 4095); //convert the analog into millivolt
-    float phValue = -5.70 * tdsAverage + (21.34);                        // I understood nothing
+    float phValue = -5.70 * tdsAverage + (21.34 - 0.5);                  // I understood nothing
     ESP_LOGI(PH_SENSOR, "Calculated average = %f", tdsAverage);
     return phValue;
 }
