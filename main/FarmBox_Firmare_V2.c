@@ -121,7 +121,7 @@ void tds_task(void *pvParameters)
     ESP_LOGI(TDS, "TDS Measurement Control Task: Starting");
     while (1)
     {
-        ESP_LOGI(TDS, "TDS Measurement Control Task: Read Sensor");
+        ESP_LOGI(TDS, "TDS Measurement Control Task: Read TDS Sensor");
         enable_tds_sensor();
         float sensorReading = read_tds_sensor(TDS_NUM_SAMPLES, sampleDelay);
         float tdsResult = convert_to_ppm(sensorReading);
@@ -173,31 +173,48 @@ void DHT_task(void *pvParameter)
     while (1)
     {
 
-        ESP_LOGI(DHT_TAG, "======== Reading Sensor ========");
-        //printf("=== Reading DHT ===\n");
+        ESP_LOGI(DHT_TAG, "Climatic Measurement Control Task: Read DHT22 Sensor");
         int ret = readDHT();
 
         errorHandler(ret);
 
         ESP_LOGW(DHT_TAG, "Humidity: %.1f", getHumidity());
         ESP_LOGW(DHT_TAG, "Temperature: %.1f", getTemperature());
+
         // -- wait at least 2 sec before reading again ------------
         // The interval of whole process must be beyond 2 seconds !!
-        vTaskDelay(3000 / portTICK_RATE_MS);
+
+        ESP_LOGI(DHT_TAG, "Climatic Measurement Control Task: Sleeping 1 minute");
+        vTaskDelay(((1000 / portTICK_PERIOD_MS) * 1) * 1); //delay in minutes between measurements
     }
 }
 void PH_Task(void *pvParameter)
 {
-    ESP_LOGI(TDS, "Water Measurement Control Task: PH Sensor");
+    ESP_LOGI(PH_TAG, "Water Measurement Control Task: PH Sensor");
     config_ph_pins();
+    setDHTgpio(4);
     while (1)
     {
 
-        ESP_LOGI(PH_TAG, "======== Reading Sensor ========");
+        ESP_LOGI(PH_TAG, "Water Measurement Control Task: Reading PH Sensor....");
         float sensorReading = read_ph_sensor(25, 20);
-        ESP_LOGW(TDS, "PH Reading = %f", sensorReading);
-        //ph_calibration(200, 100);
-        vTaskDelay(3000 / portTICK_RATE_MS);
+
+        ESP_LOGW(PH_TAG, "PH = %f", sensorReading);
+
+        int ret = readDHT();
+
+        errorHandler(ret);
+
+        ESP_LOGW(DHT_TAG, "Humidity: %.1f", getHumidity());
+        ESP_LOGW(DHT_TAG, "Temperature: %.1f", getTemperature());
+
+        float tds_sensor = read_tds_sensor(TDS_NUM_SAMPLES, sampleDelay);
+        float tdsResult = convert_to_ppm(tds_sensor);
+        //    printf("TDS Reading = %f ppm\n", tdsResult);
+        ESP_LOGW(TDS, "TDS Reading = %f ppm\n", tdsResult);
+
+        ESP_LOGI(PH_TAG, "Water Measurement Control Task: Sleeping 1 minute");
+        vTaskDelay(((1000 / portTICK_PERIOD_MS) * 1) * 1); //delay in minutes between measurements
     }
 }
 
@@ -221,7 +238,7 @@ void app_main(void)
     ESP_ERROR_CHECK(example_connect());
     ESP_LOGI(TAG, "Connected to AP, begin http example");
     //xTaskCreate(&http_test_task, "http_test_task", 8192, NULL, 5, NULL);
-    xTaskCreate(&tds_task, "tds_task", 2048, NULL, 5, NULL);
+    //xTaskCreate(&tds_task, "tds_task", 2048, NULL, 5, NULL);
     //xTaskCreate(&DHT_task, "DHT_task", 2048, NULL, 5, NULL);
     xTaskCreate(&PH_Task, "PH_Task", 2048, NULL, 5, NULL);
 }
