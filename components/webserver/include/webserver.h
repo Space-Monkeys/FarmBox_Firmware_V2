@@ -1,1 +1,1 @@
-void func(void);
+void start_webserver(void);

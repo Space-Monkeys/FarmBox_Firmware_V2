@@ -23,6 +23,7 @@
 #include "DHT22.h"
 #include "esp_http_client.h"
 #include "ph_sensor.h"
+#include "webserver.h"
 
 #define MAX_HTTP_RECV_BUFFER 512
 #define MAX_HTTP_OUTPUT_BUFFER 2048
@@ -218,18 +219,11 @@ void PH_Task(void *pvParameter)
         vTaskDelay(((1000 / portTICK_PERIOD_MS) * 1) * 1); //delay in minutes between measurements
     }
 }
-void web_server(void *pvParameter)
-{
-    ESP_LOGI(PH_TAG, "Water Measurement Control Task: PH Sensor");
-    while (1)
-    {
-
-        ESP_LOGI(PH_TAG, "Water Measurement Control Task: Reading PH Sensor....");
-    }
-}
 
 void app_main(void)
 {
+    //################################ DEFAULTS #################################
+
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
@@ -246,10 +240,15 @@ void app_main(void)
      * examples/protocols/README.md for more information about this function.
      */
     ESP_ERROR_CHECK(example_connect());
-    ESP_LOGI(TAG, "Connected to AP, begin http example");
+
+    //################################ WEBSERVER #################################
+    start_webserver();
+
+    //################################ TASKS #################################
+
     //xTaskCreate(&http_test_task, "http_test_task", 8192, NULL, 5, NULL);
     //xTaskCreate(&tds_task, "tds_task", 2048, NULL, 5, NULL);
     //xTaskCreate(&DHT_task, "DHT_task", 2048, NULL, 5, NULL);
     //xTaskCreate(&PH_Task, "PH_Task", 2048, NULL, 5, NULL);
-    xTaskCreate(&web_server, "web_server", 2048, NULL, 5, NULL);
+    //xTaskCreate(&web_server, "web_server", 2048, NULL, 5, NULL);
 }
