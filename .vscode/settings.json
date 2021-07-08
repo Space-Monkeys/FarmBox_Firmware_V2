@@ -90,7 +90,8 @@
         "esp_netif.h": "c",
         "esp_wpa2.h": "c",
         "esp_system.h": "c",
-        "ph_sensor.h": "c"
+        "ph_sensor.h": "c",
+        "esp_event.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
     

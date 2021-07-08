@@ -24,6 +24,7 @@
 #include "esp_http_client.h"
 #include "ph_sensor.h"
 #include "webserver.h"
+#include "filesystem.h"
 
 #define MAX_HTTP_RECV_BUFFER 512
 #define MAX_HTTP_OUTPUT_BUFFER 2048
@@ -243,6 +244,8 @@ void app_main(void)
 
     //################################ WEBSERVER #################################
     start_webserver();
+    //################################ FILESYSTEM ################################
+    filesystem_init();
 
     //################################ TASKS #################################
 
