@@ -30,6 +30,7 @@ static const char *TAG = "HTTP_CLIENT";
 static const char *TDS = "TDS_SENSOR";
 static const char *DHT_TAG = "DHT_SENSOR";
 static const char *PH_TAG = "PH_SENSOR";
+static const char *REST_WEBSERVER = "REST_WEBSERVER";
 
 #define TDS_NUM_SAMPLES 3
 #define TDS_SAMPLE_PERIOD 20
@@ -217,6 +218,15 @@ void PH_Task(void *pvParameter)
         vTaskDelay(((1000 / portTICK_PERIOD_MS) * 1) * 1); //delay in minutes between measurements
     }
 }
+void web_server(void *pvParameter)
+{
+    ESP_LOGI(PH_TAG, "Water Measurement Control Task: PH Sensor");
+    while (1)
+    {
+
+        ESP_LOGI(PH_TAG, "Water Measurement Control Task: Reading PH Sensor....");
+    }
+}
 
 void app_main(void)
 {
@@ -240,5 +250,6 @@ void app_main(void)
     //xTaskCreate(&http_test_task, "http_test_task", 8192, NULL, 5, NULL);
     //xTaskCreate(&tds_task, "tds_task", 2048, NULL, 5, NULL);
     //xTaskCreate(&DHT_task, "DHT_task", 2048, NULL, 5, NULL);
-    xTaskCreate(&PH_Task, "PH_Task", 2048, NULL, 5, NULL);
+    //xTaskCreate(&PH_Task, "PH_Task", 2048, NULL, 5, NULL);
+    xTaskCreate(&web_server, "web_server", 2048, NULL, 5, NULL);
 }
