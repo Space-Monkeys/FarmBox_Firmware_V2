@@ -3,6 +3,8 @@
 #include "esp_spiffs.h"
 #include "esp_log.h"
 #include <esp_event.h>
+#include <dirent.h>
+#include "cJSON.h"
 
 static const char *TAG_FILESYSTEM = "FILESYSTEM";
 
@@ -10,7 +12,7 @@ void filesystem_init()
 {
     //############### FILESYSTEM ####################
 
-    ESP_LOGI(TAG_FILESYSTEM, "Initializing SPIFFS");
+    ESP_LOGI(TAG_FILESYSTEM, "========================== Starting SPIFFS ==========================");
 
     esp_vfs_spiffs_conf_t conf = {
         .base_path = "/spiffs",
@@ -53,5 +55,78 @@ void filesystem_init()
 
 const char *getFiles(char *filepath)
 {
+    DIR *d;
+    struct dirent *dir;
+    d = opendir("/spiffs");
+
+    if (d)
+    {
+        while ((dir = readdir(d)) != NULL)
+        {
+            printf("%s\n", dir->d_name);
+        }
+
+        closedir(d);
+    }
     return filepath;
+}
+const char *readFile(char *filepath)
+{
+
+    /* declare a file pointer */
+    FILE *infile;
+    char *buffer;
+    long numbytes;
+
+    /* open an existing file for reading */
+    infile = fopen(filepath, "r");
+
+    /* quit if the file does not exist */
+    if (infile == NULL)
+    {
+        ESP_LOGE(TAG_FILESYSTEM, "File does not exist");
+    }
+
+    /* Get the number of bytes */
+    fseek(infile, 0L, SEEK_END);
+    numbytes = ftell(infile);
+
+    /* reset the file position indicator to the beginning of the file */
+    fseek(infile, 0L, SEEK_SET);
+
+    /* grab sufficient memory for the buffer to hold the text */
+    buffer = (char *)calloc(numbytes, sizeof(char));
+
+    /* memory error */
+    if (buffer == NULL)
+    {
+        ESP_LOGE(TAG_FILESYSTEM, "Memory error");
+    }
+
+    /* copy all the text into the buffer */
+    fread(buffer, sizeof(char), numbytes, infile);
+    fclose(infile);
+
+    /* confirm we have read the file by outputing it to the console */
+    //  printf("The file called contains this text\n\n%s", buffer);
+    ESP_LOGE(TAG_FILESYSTEM, "%s", buffer);
+    /* free the memory we used for the buffer */
+    free(buffer);
+
+    return filepath;
+}
+
+void writeFile(char *filepath, char *file_data)
+{
+    // First create a file.
+    ESP_LOGI(TAG_FILESYSTEM, "Opening file");
+    FILE *f = fopen(filepath, "w");
+    if (f == NULL)
+    {
+        ESP_LOGE(TAG_FILESYSTEM, "Failed to open file for writing");
+    }
+    fprintf(f, file_data);
+    fclose(f);
+
+    ESP_LOGI(TAG_FILESYSTEM, "File written");
 }

@@ -5,6 +5,7 @@
 #include "cJSON.h"
 #include <esp_event.h>
 #include <sys/param.h>
+#include "filesystem.h"
 
 static const char *WEBSEVER_INTERNAL = "WEBSERVER";
 
@@ -53,10 +54,19 @@ static esp_err_t water_pump_post_handler(httpd_req_t *req)
         httpd_resp_send_chunk(req, buf, ret);
         remaining -= ret;
 
+        char *string = NULL;
+
+        cJSON *json_data = cJSON_Parse(buf);
+        string = cJSON_Print(json_data);
+
+        //printf("%s", string);
+
+        //writeFile("/spiffs/hello.txt", string);
+        readFile("/spiffs/hello.txt");
         /* Log data received */
-        ESP_LOGI(WEBSEVER_INTERNAL, "=========== RECEIVED DATA ==========");
+        /* ESP_LOGI(WEBSEVER_INTERNAL, "=========== RECEIVED DATA ==========");
         ESP_LOGI(WEBSEVER_INTERNAL, "%.*s", ret, buf);
-        ESP_LOGI(WEBSEVER_INTERNAL, "====================================");
+        ESP_LOGI(WEBSEVER_INTERNAL, "===================================="); */
     }
 
     // End response
