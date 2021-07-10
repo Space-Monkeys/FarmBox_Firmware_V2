@@ -36,6 +36,14 @@ static esp_err_t water_pump_post_handler(httpd_req_t *req)
     char buf[100];
     int ret, remaining = req->content_len;
 
+    httpd_resp_set_type(req, "application/json");
+
+    char *body_complete_data;
+
+    const char *initial_body = "";
+    body_complete_data = malloc(2000);        /* make space for the new string (should check the return value ...) */
+    strcpy(body_complete_data, initial_body); /* copy name into the new var */
+    //strcat(body_complete_data, buf);          /* mount entire buff */
     while (remaining > 0)
     {
         /* Read the data for the request */
@@ -54,23 +62,27 @@ static esp_err_t water_pump_post_handler(httpd_req_t *req)
         httpd_resp_send_chunk(req, buf, ret);
         remaining -= ret;
 
-        char *string = NULL;
+        strcat(body_complete_data, buf); /* mount entire buff */
+        printf("%s\n", "######################################");
+        printf("%s\n", body_complete_data);
+        printf("%s\n", "######################################");
 
-        cJSON *json_data = cJSON_Parse(buf);
-        string = cJSON_Print(json_data);
-
-        //printf("%s", string);
-
-        //writeFile("/spiffs/hello.txt", string);
-        readFile("/spiffs/hello.txt");
+        //writeFile("/spiffs/hello.txt", buf);
+        //readFile("/spiffs/hello.txt");
+        //editFile("/spiffs/hello.txt", "lights");
         /* Log data received */
-        /* ESP_LOGI(WEBSEVER_INTERNAL, "=========== RECEIVED DATA ==========");
+        ESP_LOGI(WEBSEVER_INTERNAL, "=========== RECEIVED DATA ==========");
         ESP_LOGI(WEBSEVER_INTERNAL, "%.*s", ret, buf);
-        ESP_LOGI(WEBSEVER_INTERNAL, "===================================="); */
+        ESP_LOGI(WEBSEVER_INTERNAL, "====================================");
     }
 
-    // End response
+    cJSON *json = cJSON_Parse(body_complete_data);
+    char *string = cJSON_Print(json);
+
+    writeFile("/spiffs/hello.txt", string);
+    readFile("/spiffs/hello.txt");
     httpd_resp_send_chunk(req, NULL, 0);
+    free(body_complete_data);
     return ESP_OK;
 }
 

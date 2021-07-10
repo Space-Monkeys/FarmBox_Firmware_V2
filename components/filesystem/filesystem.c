@@ -1,3 +1,4 @@
+#define _LARGEFILE64_SOURCE
 #include <stdio.h>
 #include "filesystem.h"
 #include "esp_spiffs.h"
@@ -120,13 +121,72 @@ void writeFile(char *filepath, char *file_data)
 {
     // First create a file.
     ESP_LOGI(TAG_FILESYSTEM, "Opening file");
-    FILE *f = fopen(filepath, "w");
+    FILE *f = fopen(filepath, "wb");
     if (f == NULL)
     {
         ESP_LOGE(TAG_FILESYSTEM, "Failed to open file for writing");
     }
     fprintf(f, file_data);
     fclose(f);
+    ESP_LOGI(TAG_FILESYSTEM, "File written");
+}
+void editFile(char *filepath, char *json_key)
+{
+    /* declare a file pointer */
+    FILE *infile;
+    char *buffer;
+    long numbytes;
+
+    /* open an existing file for reading */
+    infile = fopen(filepath, "r");
+
+    /* quit if the file does not exist */
+    if (infile == NULL)
+    {
+        ESP_LOGE(TAG_FILESYSTEM, "File does not exist");
+    }
+
+    /* Get the number of bytes */
+    fseek(infile, 0L, SEEK_END);
+    numbytes = ftell(infile);
+
+    /* reset the file position indicator to the beginning of the file */
+    fseek(infile, 0L, SEEK_SET);
+
+    /* grab sufficient memory for the buffer to hold the text */
+    buffer = (char *)calloc(numbytes, sizeof(char));
+
+    /* memory error */
+    if (buffer == NULL)
+    {
+        ESP_LOGE(TAG_FILESYSTEM, "Memory error");
+    }
+
+    /* copy all the text into the buffer */
+    fread(buffer, sizeof(char), numbytes, infile);
+    fclose(infile);
+
+    /*  //Write data in file
+    ESP_LOGI(TAG_FILESYSTEM, "Opening file for writing");
+    FILE *f = fopen(filepath, "w");
+    if (f == NULL)
+    {
+        ESP_LOGE(TAG_FILESYSTEM, "Failed to open file for writing");
+    }
+    fprintf(f, file_data);
+    fclose(f); */
+
+    cJSON *file_json = cJSON_Parse(buffer);
+
+    const cJSON *json_data = NULL;
+    json_data = cJSON_GetObjectItemCaseSensitive(file_json, "water_pump");
+
+    printf("Checking monitor \"%s\"\n", json_data->valuestring);
 
     ESP_LOGI(TAG_FILESYSTEM, "File written");
+    /* confirm we have read the file by outputing it to the console */
+    //  printf("The file called contains this text\n\n%s", buffer);
+    ESP_LOGE(TAG_FILESYSTEM, "%s", buffer);
+    /* free the memory we used for the buffer */
+    free(buffer);
 }
