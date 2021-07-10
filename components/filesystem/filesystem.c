@@ -83,36 +83,39 @@ const char *readFile(char *filepath)
     infile = fopen(filepath, "r");
 
     /* quit if the file does not exist */
-    if (infile == NULL)
+    if (infile != NULL)
+    {
+        /* Get the number of bytes */
+        fseek(infile, 0L, SEEK_END);
+        numbytes = ftell(infile);
+
+        /* reset the file position indicator to the beginning of the file */
+        fseek(infile, 0L, SEEK_SET);
+
+        /* grab sufficient memory for the buffer to hold the text */
+        buffer = (char *)calloc(numbytes, sizeof(char));
+
+        /* memory error */
+        if (buffer == NULL)
+        {
+            ESP_LOGE(TAG_FILESYSTEM, "Memory error");
+        }
+
+        /* copy all the text into the buffer */
+        fread(buffer, sizeof(char), numbytes, infile);
+        fclose(infile);
+
+        /* confirm we have read the file by outputing it to the console */
+        //  printf("The file called contains this text\n\n%s", buffer);
+        ESP_LOGE(TAG_FILESYSTEM, "%s", buffer);
+
+        /* free the memory we used for the buffer */
+        free(buffer);
+    }
+    else
     {
         ESP_LOGE(TAG_FILESYSTEM, "File does not exist");
     }
-
-    /* Get the number of bytes */
-    fseek(infile, 0L, SEEK_END);
-    numbytes = ftell(infile);
-
-    /* reset the file position indicator to the beginning of the file */
-    fseek(infile, 0L, SEEK_SET);
-
-    /* grab sufficient memory for the buffer to hold the text */
-    buffer = (char *)calloc(numbytes, sizeof(char));
-
-    /* memory error */
-    if (buffer == NULL)
-    {
-        ESP_LOGE(TAG_FILESYSTEM, "Memory error");
-    }
-
-    /* copy all the text into the buffer */
-    fread(buffer, sizeof(char), numbytes, infile);
-    fclose(infile);
-
-    /* confirm we have read the file by outputing it to the console */
-    //  printf("The file called contains this text\n\n%s", buffer);
-    ESP_LOGE(TAG_FILESYSTEM, "%s", buffer);
-    /* free the memory we used for the buffer */
-    free(buffer);
 
     return filepath;
 }
@@ -130,12 +133,13 @@ void writeFile(char *filepath, char *file_data)
     fclose(f);
     ESP_LOGI(TAG_FILESYSTEM, "File written");
 }
-void editFile(char *filepath, char *json_key)
+void editFile(char *filepath, char *json_key, char *json_key_data)
 {
     /* declare a file pointer */
     FILE *infile;
     char *buffer;
     long numbytes;
+    const cJSON *json_data = NULL;
 
     /* open an existing file for reading */
     infile = fopen(filepath, "r");
@@ -166,27 +170,23 @@ void editFile(char *filepath, char *json_key)
     fread(buffer, sizeof(char), numbytes, infile);
     fclose(infile);
 
-    /*  //Write data in file
-    ESP_LOGI(TAG_FILESYSTEM, "Opening file for writing");
-    FILE *f = fopen(filepath, "w");
-    if (f == NULL)
-    {
-        ESP_LOGE(TAG_FILESYSTEM, "Failed to open file for writing");
-    }
-    fprintf(f, file_data);
-    fclose(f); */
-
     cJSON *file_json = cJSON_Parse(buffer);
 
-    const cJSON *json_data = NULL;
-    json_data = cJSON_GetObjectItemCaseSensitive(file_json, "water_pump");
+    json_data = cJSON_GetObjectItemCaseSensitive(file_json, json_key);
 
-    printf("Checking monitor \"%s\"\n", json_data->valuestring);
+    if (cJSON_IsString(json_data) && (json_data->valuestring != NULL))
+    {
+        char *file_old_default_config = cJSON_Print(file_json);
+        ESP_LOGI(TAG_FILESYSTEM, "Value before change:\n %s", file_old_default_config);
+        cJSON_GetObjectItemCaseSensitive(file_json, json_key)->valuestring = json_key_data;
 
-    ESP_LOGI(TAG_FILESYSTEM, "File written");
-    /* confirm we have read the file by outputing it to the console */
-    //  printf("The file called contains this text\n\n%s", buffer);
-    ESP_LOGE(TAG_FILESYSTEM, "%s", buffer);
-    /* free the memory we used for the buffer */
+        char *file_new_default_config = cJSON_Print(file_json);
+        writeFile(filepath, file_new_default_config);
+        ESP_LOGI(TAG_FILESYSTEM, "Value after change: \n %s", file_new_default_config);
+    }
+    else
+    {
+        ESP_LOGW(TAG_FILESYSTEM, "%s", "Not find this index in file");
+    }
     free(buffer);
 }
