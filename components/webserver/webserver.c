@@ -6,6 +6,7 @@
 #include <esp_event.h>
 #include <sys/param.h>
 #include "filesystem.h"
+#include "water_pump.h"
 
 static const char *WEBSEVER_INTERNAL = "WEBSERVER";
 
@@ -89,7 +90,7 @@ static esp_err_t water_pump_post_handler(httpd_req_t *req)
     const char *initial_body = "";
     body_complete_data = malloc(2000);        /* make space for the new string (should check the return value ...) */
     strcpy(body_complete_data, initial_body); /* copy name into the new var */
-    //strcat(body_complete_data, buf);          /* mount entire buff */
+
     while (remaining > 0)
     {
         /* Read the data for the request */
@@ -118,19 +119,16 @@ static esp_err_t water_pump_post_handler(httpd_req_t *req)
     const cJSON *pump_activation_interval = NULL;
     pump_activation_interval = cJSON_GetObjectItemCaseSensitive(body_json, "pump_activation_interval");
 
-    //writeFile("/spiffs/default.json", string);
-
     if (cJSON_IsString(pump_activation_interval) && (pump_activation_interval->valuestring != NULL))
     {
         ESP_LOGI(WEBSEVER_INTERNAL, "%s", pump_activation_interval->valuestring);
 
         editFile("/spiffs/default.json", "pump_activation_interval", pump_activation_interval->valuestring);
     }
-    //char *file_new_default_config = cJSON_Print(json);
-    //char *file_default_config = readFile("/spiffs/hello.txt");
 
     httpd_resp_send_chunk(req, NULL, 0);
     free(body_complete_data);
+    esp_restart();
     return ESP_OK;
 }
 
