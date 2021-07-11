@@ -25,6 +25,7 @@
 #include "ph_sensor.h"
 #include "webserver.h"
 #include "filesystem.h"
+#include "water_pump.h"
 
 #define MAX_HTTP_RECV_BUFFER 512
 #define MAX_HTTP_OUTPUT_BUFFER 2048
@@ -34,6 +35,7 @@ static const char *DHT_TAG = "DHT_SENSOR";
 static const char *PH_TAG = "PH_SENSOR";
 static const char *REST_WEBSERVER = "REST_WEBSERVER";
 
+#define DHT_22_GPIO 4
 #define TDS_NUM_SAMPLES 3
 #define TDS_SAMPLE_PERIOD 20
 
@@ -170,9 +172,9 @@ void tds_task(void *pvParameters)
 }
 void DHT_task(void *pvParameter)
 {
-    setDHTgpio(4);
+    setDHTgpio(DHT_22_GPIO);
     ESP_LOGI(TDS, "Climatic Measurement Control Task: DHT22 Sensor");
-
+    const TickType_t xDelay = 60000 / portTICK_PERIOD_MS;
     while (1)
     {
 
@@ -188,7 +190,7 @@ void DHT_task(void *pvParameter)
         // The interval of whole process must be beyond 2 seconds !!
 
         ESP_LOGI(DHT_TAG, "Climatic Measurement Control Task: Sleeping 1 minute");
-        vTaskDelay(((1000 / portTICK_PERIOD_MS) * 1) * 1); //delay in minutes between measurements
+        vTaskDelay(xDelay); //delay in minutes between measurements
     }
 }
 void PH_Task(void *pvParameter)
@@ -221,6 +223,11 @@ void PH_Task(void *pvParameter)
     }
 }
 
+void pump_task(void *pvParameter)
+{
+    load_pump_configuration();
+}
+
 void app_main(void)
 {
     //################################ DEFAULTS #################################
@@ -236,23 +243,21 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     vTaskDelay(1000 / portTICK_RATE_MS);
-    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-     * Read "Establishing Wi-Fi or Ethernet Connection" section in
-     * examples/protocols/README.md for more information about this function.
-     */
+
     ESP_ERROR_CHECK(example_connect());
 
     //################################ FILESYSTEM ################################
     filesystem_init();
 
     //################################ WEBSERVER #################################
+
     start_webserver();
 
     //################################ TASKS #################################
 
-    //xTaskCreate(&http_test_task, "http_test_task", 8192, NULL, 5, NULL);
+    //xTaskCreate(&pump_task, "pump_task", 2048, NULL, 5, NULL);
     //xTaskCreate(&tds_task, "tds_task", 2048, NULL, 5, NULL);
-    //xTaskCreate(&DHT_task, "DHT_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&DHT_task, "DHT_task", 2048, NULL, 5, NULL);
     //xTaskCreate(&PH_Task, "PH_Task", 2048, NULL, 5, NULL);
     //xTaskCreate(&web_server, "web_server", 2048, NULL, 5, NULL);
 }
