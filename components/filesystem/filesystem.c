@@ -107,7 +107,9 @@ const char *readFile(char *filepath)
 
         /* confirm we have read the file by outputing it to the console */
         //  printf("The file called contains this text\n\n%s", buffer);
-        ESP_LOGE(TAG_FILESYSTEM, "%s", buffer);
+        return buffer;
+
+        //ESP_LOGE(TAG_FILESYSTEM, "%s", buffer);
 
         /* free the memory we used for the buffer */
         free(buffer);
@@ -115,9 +117,8 @@ const char *readFile(char *filepath)
     else
     {
         ESP_LOGE(TAG_FILESYSTEM, "File does not exist");
+        return "";
     }
-
-    return filepath;
 }
 
 void writeFile(char *filepath, char *file_data)
