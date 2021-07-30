@@ -114,6 +114,7 @@ static esp_err_t water_pump_post_handler(httpd_req_t *req)
 
     cJSON *body_json = cJSON_Parse(body_complete_data);
     char *string = cJSON_Print(body_json);
+
     ESP_LOGI(WEBSEVER_INTERNAL, "%s", string);
 
     const cJSON *pump_activation_interval = NULL;
@@ -128,7 +129,6 @@ static esp_err_t water_pump_post_handler(httpd_req_t *req)
 
     httpd_resp_send_chunk(req, NULL, 0);
     free(body_complete_data);
-    esp_restart();
     return ESP_OK;
 }
 
