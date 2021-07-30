@@ -14,6 +14,7 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
+#include "cJSON.h"
 #include "esp_event.h"
 #include "esp_netif.h"
 #include "protocol_examples_common.h"
@@ -27,6 +28,7 @@
 #include "requests.h"
 #include "time.h"
 #include "esp_sntp.h"
+#include "filesystem.h"
 
 #define MAX_HTTP_RECV_BUFFER 512
 #define MAX_HTTP_OUTPUT_BUFFER 2048
@@ -181,12 +183,23 @@ void task_manager(void *pvParameter)
     int control = 1;
     while (1)
     {
+
         if (control == 1)
         {
-            vTaskDelay(9000 / portTICK_PERIOD_MS);
+            vTaskDelay(10000 / portTICK_PERIOD_MS);
+
             vTaskDelete(Clock_TaskHandle);
+            char *json = readFile("/spiffs/default.json");
+            cJSON *monitor_json = cJSON_Parse(json);
+            if (monitor_json == NULL)
+            {
+                char *string = cJSON_Print(monitor_json);
+                printf("%s\n", string);
+            }
             ESP_LOGW(CLOCK_TAG, "%s", "Task Deleted");
+            vTaskDelay(50000 / portTICK_PERIOD_MS);
             control = 0;
+            cJSON_Delete(monitor_json);
         }
         else
         {
