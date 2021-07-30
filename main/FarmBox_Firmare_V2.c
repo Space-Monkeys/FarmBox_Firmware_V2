@@ -25,6 +25,8 @@
 #include "filesystem.h"
 #include "water_pump.h"
 #include "requests.h"
+#include "time.h"
+#include "esp_sntp.h"
 
 #define MAX_HTTP_RECV_BUFFER 512
 #define MAX_HTTP_OUTPUT_BUFFER 2048
@@ -33,14 +35,19 @@ static const char *TDS = "TDS_SENSOR";
 static const char *DHT_TAG = "DHT_SENSOR";
 static const char *PH_TAG = "PH_SENSOR";
 static const char *REST_WEBSERVER = "REST_WEBSERVER";
+static const char *CLOCK_TAG = "CLOCK_TASK";
 
 #define DHT_22_GPIO 4
 #define TDS_NUM_SAMPLES 3
 #define TDS_SAMPLE_PERIOD 20
+TaskHandle_t Clock_TaskHandle;
 
 const char *API_FARMBOX_HOST = "spacemonkeys.com.br";
 
 int API_FARMBOX_PORT = 8320;
+
+static void obtain_time(void);
+static void initialize_sntp(void);
 
 float sampleDelay = (TDS_SAMPLE_PERIOD / TDS_NUM_SAMPLES) * 1000;
 
@@ -119,6 +126,101 @@ void pump_task(void *pvParameter)
 {
     load_pump_configuration();
 }
+void time_sync_notification_cb(struct timeval *tv)
+{
+    ESP_LOGI(TAG, "Notification of a time synchronization event");
+}
+
+void scheduler_task(void *pvParameter)
+{
+    ESP_LOGI(TAG, "Task Clock Init");
+    time_t now;
+    struct tm timeinfo;
+    time(&now);
+    localtime_r(&now, &timeinfo);
+    // Is time set? If not, tm_year will be (1970 - 1900).
+    if (timeinfo.tm_year < (2016 - 1900))
+    {
+        ESP_LOGI(TAG, "Time is not set yet. Connecting to WiFi and getting time over NTP.");
+        obtain_time();
+        // update 'now' variable with current time
+        time(&now);
+    }
+
+    char strftime_buf[64];
+
+    // Set timezone to Eastern Standard Time and print local time
+    setenv("TZ", "<-03>3", 1);
+    tzset();
+    long int water_pump_interval = 15;
+    long int next_pump_enable_time = now + water_pump_interval;
+
+    while (1)
+    {
+        time(&now);
+
+        localtime_r(&now, &timeinfo);
+        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+
+        if (now >= next_pump_enable_time)
+        {
+            ESP_LOGW(CLOCK_TAG, "%s", "Bomba Ligada");
+            next_pump_enable_time = now + water_pump_interval;
+            ESP_LOGW(CLOCK_TAG, "Next enable pump time is in %ld", next_pump_enable_time);
+        }
+
+        ESP_LOGI(CLOCK_TAG, "The current date/time in São Paulo is: %s", strftime_buf);
+
+        vTaskDelay(((1000 / portTICK_PERIOD_MS) * 1) * 1); //delay in minutes between measurements
+    }
+}
+
+void task_manager(void *pvParameter)
+{
+    xTaskCreate(&scheduler_task, "scheduler_task", 2048, NULL, 5, &Clock_TaskHandle);
+    int control = 1;
+    while (1)
+    {
+        if (control == 1)
+        {
+            vTaskDelay(9000 / portTICK_PERIOD_MS);
+            vTaskDelete(Clock_TaskHandle);
+            ESP_LOGW(CLOCK_TAG, "%s", "Task Deleted");
+            control = 0;
+        }
+        else
+        {
+            xTaskCreate(&scheduler_task, "scheduler_task", 2048, NULL, 5, &Clock_TaskHandle);
+            control = 1;
+        }
+    }
+}
+
+static void obtain_time(void)
+{
+    initialize_sntp();
+
+    // wait for time to be set
+    time_t now = 0;
+    struct tm timeinfo = {0};
+    int retry = 0;
+    const int retry_count = 10;
+    while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ++retry < retry_count)
+    {
+        ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+    }
+    time(&now);
+    localtime_r(&now, &timeinfo);
+}
+static void initialize_sntp(void)
+{
+    ESP_LOGI(TAG, "Initializing SNTP");
+    sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    sntp_setservername(0, "pool.ntp.org");
+    sntp_set_time_sync_notification_cb(time_sync_notification_cb);
+    sntp_init();
+}
 
 void app_main(void)
 {
@@ -137,6 +239,7 @@ void app_main(void)
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     ESP_ERROR_CHECK(example_connect());
+    vTaskDelay(2000 / portTICK_RATE_MS);
 
     //################################ FILESYSTEM ################################
     filesystem_init();
@@ -146,10 +249,9 @@ void app_main(void)
     start_webserver();
 
     //################################ TASKS #################################
-
     //xTaskCreate(&pump_task, "pump_task", 2048, NULL, 5, NULL);
     //xTaskCreate(&tds_task, "tds_task", 2048, NULL, 5, NULL);
-    xTaskCreate(&DHT_task, "DHT_task", 4096, NULL, 5, NULL);
+    // xTaskCreate(&DHT_task, "DHT_task", 4096, NULL, 5, NULL);
     //xTaskCreate(&PH_Task, "PH_Task", 2048, NULL, 5, NULL);
-    //xTaskCreate(&web_server, "web_server", 2048, NULL, 5, NULL);
+    xTaskCreate(&task_manager, "task_manager", 2048, NULL, 5, NULL);
 }
