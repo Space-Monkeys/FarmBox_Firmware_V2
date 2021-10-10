@@ -129,6 +129,7 @@ void writeFile(char *filepath, char *file_data)
     if (f == NULL)
     {
         ESP_LOGE(TAG_FILESYSTEM, "Failed to open file for writing");
+        return;
     }
     fprintf(f, file_data);
     fclose(f);
