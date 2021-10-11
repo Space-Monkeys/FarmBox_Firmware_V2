@@ -71,7 +71,7 @@ const char *getFiles(char *filepath)
     }
     return filepath;
 }
-const char *readFile(char *filepath)
+char *readFile(char *filepath)
 {
 
     /* declare a file pointer */
@@ -87,7 +87,7 @@ const char *readFile(char *filepath)
     {
         /* Get the number of bytes */
         fseek(infile, 0L, SEEK_END);
-        numbytes = ftell(infile);
+        numbytes = ftell(infile) + 1;
 
         /* reset the file position indicator to the beginning of the file */
         fseek(infile, 0L, SEEK_SET);
@@ -116,7 +116,7 @@ const char *readFile(char *filepath)
     }
     else
     {
-        ESP_LOGE(TAG_FILESYSTEM, "File does not exist");
+        ESP_LOGE(TAG_FILESYSTEM, "File in %s does not exist", filepath);
         return "";
     }
 }
@@ -142,6 +142,7 @@ void editFile(char *filepath, char *json_key, char *json_key_data)
     char *buffer;
     long numbytes;
     const cJSON *json_data = NULL;
+    cJSON *new_index_str = NULL;
 
     /* open an existing file for reading */
     infile = fopen(filepath, "r");
@@ -149,7 +150,7 @@ void editFile(char *filepath, char *json_key, char *json_key_data)
     /* quit if the file does not exist */
     if (infile == NULL)
     {
-        ESP_LOGE(TAG_FILESYSTEM, "File does not exist");
+        ESP_LOGE(TAG_FILESYSTEM, "File in %s does not exist", filepath);
     }
 
     /* Get the number of bytes */
@@ -188,7 +189,11 @@ void editFile(char *filepath, char *json_key, char *json_key_data)
     }
     else
     {
-        ESP_LOGW(TAG_FILESYSTEM, "%s", "Not find this index in file");
+        ESP_LOGW(TAG_FILESYSTEM, "%s", "Not find this index in file, creating new index....");
+        new_index_str = cJSON_CreateString(json_key_data);
+        cJSON_AddItemToObject(file_json, json_key, new_index_str);
+        char *file_new_default_config = cJSON_Print(file_json);
+        writeFile(filepath, file_new_default_config);
     }
     free(buffer);
 }
