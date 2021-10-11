@@ -68,11 +68,17 @@ static esp_err_t write_new_config_file(httpd_req_t *req)
     }
 
     cJSON *body_json = cJSON_Parse(body_complete_data);
-    char *string = cJSON_Print(body_json);
 
-    ESP_LOGI(WEBSEVER_INTERNAL, "%s", string);
+    const cJSON *config_file_directory = NULL;
+    config_file_directory = cJSON_GetObjectItemCaseSensitive(body_json, "config_file_directory");
 
-    writeFile("/spiffs/default.json", string);
+    const cJSON *data = NULL;
+    data = cJSON_GetObjectItemCaseSensitive(body_json, "data");
+
+    char *string = cJSON_Print(data);
+    char *directory = config_file_directory->valuestring;
+
+    writeFile(directory, string);
 
     httpd_resp_send_chunk(req, NULL, 0);
     free(body_complete_data);
@@ -118,13 +124,16 @@ static esp_err_t water_pump_post_handler(httpd_req_t *req)
     ESP_LOGI(WEBSEVER_INTERNAL, "%s", string);
 
     const cJSON *pump_activation_interval = NULL;
-    pump_activation_interval = cJSON_GetObjectItemCaseSensitive(body_json, "pump_activation_interval");
+    pump_activation_interval = cJSON_GetObjectItemCaseSensitive(body_json, "active_pump_time");
 
     if (cJSON_IsString(pump_activation_interval) && (pump_activation_interval->valuestring != NULL))
     {
         ESP_LOGI(WEBSEVER_INTERNAL, "%s", pump_activation_interval->valuestring);
 
-        editFile("/spiffs/default.json", "pump_activation_interval", pump_activation_interval->valuestring);
+        editFile("/spiffs/default.json", "active_pump_time", pump_activation_interval->valuestring);
+    }
+    else
+    {
     }
 
     httpd_resp_send_chunk(req, NULL, 0);

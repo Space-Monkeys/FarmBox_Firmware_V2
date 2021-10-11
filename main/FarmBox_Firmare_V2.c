@@ -124,10 +124,10 @@ void PH_Task(void *pvParameter)
     }
 }
 
-void pump_task(void *pvParameter)
+/* void pump_task(void *pvParameter)
 {
     load_pump_configuration();
-}
+} */
 void time_sync_notification_cb(struct timeval *tv)
 {
     ESP_LOGI(TAG, "Notification of a time synchronization event");
@@ -149,37 +149,16 @@ void scheduler_task(void *pvParameter)
         time(&now);
     }
 
-    char strftime_buf[64];
-
     // Set timezone to Eastern Standard Time and print local time
     setenv("TZ", "<-03>3", 1);
     tzset();
-    long int water_pump_interval = 15;
-    long int next_pump_enable_time = now + water_pump_interval;
-
-    while (1)
-    {
-        time(&now);
-
-        localtime_r(&now, &timeinfo);
-        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-
-        if (now >= next_pump_enable_time)
-        {
-            ESP_LOGW(CLOCK_TAG, "%s", "Bomba Ligada");
-            next_pump_enable_time = now + water_pump_interval;
-            ESP_LOGW(CLOCK_TAG, "Next enable pump time is in %ld", next_pump_enable_time);
-        }
-
-        ESP_LOGI(CLOCK_TAG, "The current date/time in São Paulo is: %s", strftime_buf);
-
-        vTaskDelay(((1000 / portTICK_PERIOD_MS) * 1) * 1); //delay in minutes between measurements
-    }
+    load_pump_configuration(now);
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
 }
 
 void task_manager(void *pvParameter)
 {
-    xTaskCreate(&scheduler_task, "scheduler_task", 2048, NULL, 5, &Clock_TaskHandle);
+    xTaskCreate(&scheduler_task, "scheduler_task", 10096, NULL, 5, &Clock_TaskHandle);
     int control = 1;
     while (1)
     {
@@ -187,23 +166,14 @@ void task_manager(void *pvParameter)
         if (control == 1)
         {
             vTaskDelay(10000 / portTICK_PERIOD_MS);
-
             vTaskDelete(Clock_TaskHandle);
-            char *json = readFile("/spiffs/default.json");
-            cJSON *monitor_json = cJSON_Parse(json);
-            if (monitor_json == NULL)
-            {
-                char *string = cJSON_Print(monitor_json);
-                printf("%s\n", string);
-            }
             ESP_LOGW(CLOCK_TAG, "%s", "Task Deleted");
-            vTaskDelay(50000 / portTICK_PERIOD_MS);
+            vTaskDelay(30000 / portTICK_PERIOD_MS);
             control = 0;
-            cJSON_Delete(monitor_json);
         }
         else
         {
-            xTaskCreate(&scheduler_task, "scheduler_task", 2048, NULL, 5, &Clock_TaskHandle);
+            xTaskCreate(&scheduler_task, "scheduler_task", 10096, NULL, 5, &Clock_TaskHandle);
             control = 1;
         }
     }
@@ -260,11 +230,12 @@ void app_main(void)
     //################################ WEBSERVER #################################
 
     start_webserver();
+    vTaskDelay(5000 / portTICK_RATE_MS);
 
     //################################ TASKS #################################
     //xTaskCreate(&pump_task, "pump_task", 2048, NULL, 5, NULL);
     //xTaskCreate(&tds_task, "tds_task", 2048, NULL, 5, NULL);
     // xTaskCreate(&DHT_task, "DHT_task", 4096, NULL, 5, NULL);
     //xTaskCreate(&PH_Task, "PH_Task", 2048, NULL, 5, NULL);
-    xTaskCreate(&task_manager, "task_manager", 2048, NULL, 5, NULL);
+    xTaskCreate(&task_manager, "task_manager", 10096, NULL, 5, NULL);
 }

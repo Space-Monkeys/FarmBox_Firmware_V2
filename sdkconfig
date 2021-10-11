@@ -346,6 +346,10 @@ CONFIG_ESP32_DPORT_DIS_INTERRUPT_LVL=5
 # end of ESP32-specific
 
 #
+# Sqlite3
+#
+
+#
 # ADC-Calibration
 #
 CONFIG_ADC_CAL_EFUSE_TP_ENABLE=y
