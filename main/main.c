@@ -28,7 +28,6 @@
 #include "requests.h"
 #include "time.h"
 #include "esp_sntp.h"
-#include "filesystem.h"
 #include "driver/gpio.h"
 #include "cron.h"
 
@@ -142,13 +141,13 @@ void check_time()
     time(&now);
     localtime_r(&now, &timeinfo);
     strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-    ESP_LOGI(TAG, "The current date/time in Paris is: %s", strftime_buf);
+    ESP_LOGI(TAG, "The current date/time in Brazil is: %s", strftime_buf);
 }
 
 void manage_switcher(cron_job *job)
 {
     check_time();
-    int duration = 500; // un quart d'heure
+    int duration = 5000000; // un quart d'heure
     ESP_LOGI(TAG, "Opening gpio...");
     gpio_set_level(GPIO_OUTPUT, true);
     vTaskDelay(duration / portTICK_PERIOD_MS);
@@ -204,6 +203,10 @@ void app_main(void)
     vTaskDelay(2000 / portTICK_RATE_MS);
 
     //################################ CRON #################################
+    // // gpio
+    ESP_LOGI(TAG, "Setting gpio...");
+    gpio_pad_select_gpio(GPIO_OUTPUT);
+    gpio_set_direction(GPIO_OUTPUT, GPIO_MODE_OUTPUT);
 
     ESP_LOGI(TAG, "Setting cron job...");
     cron_job *jobs[2];
