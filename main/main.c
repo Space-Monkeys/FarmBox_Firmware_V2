@@ -29,6 +29,8 @@
 #include "time.h"
 #include "esp_sntp.h"
 #include "filesystem.h"
+#include "driver/gpio.h"
+#include "cron.h"
 
 #define MAX_HTTP_RECV_BUFFER 512
 #define MAX_HTTP_OUTPUT_BUFFER 2048
@@ -41,6 +43,8 @@ static const char *CLOCK_TAG = "CLOCK_TASK";
 
 #define DHT_22_GPIO 4
 #define TDS_NUM_SAMPLES 3
+#define GPIO_INPUT 16
+#define GPIO_OUTPUT 18
 #define TDS_SAMPLE_PERIOD 20
 TaskHandle_t Clock_TaskHandle;
 
@@ -70,6 +74,14 @@ float sampleDelay = (TDS_SAMPLE_PERIOD / TDS_NUM_SAMPLES) * 1000;
         vTaskDelay(((1000 / portTICK_PERIOD_MS) * 1) * 1); //delay in minutes between measurements
     }
 } */
+void print_time(time_t t)
+{
+    char strftime_buf[64];
+    struct tm timeinfo;
+    localtime_r(&t, &timeinfo);
+    strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+    ESP_LOGI(TAG, "The date/time in Paris is: %s", strftime_buf);
+}
 void DHT_task(void *pvParameter)
 {
     setDHTgpio(DHT_22_GPIO);
@@ -124,10 +136,6 @@ void PH_Task(void *pvParameter)
     }
 }
 
-/* void pump_task(void *pvParameter)
-{
-    load_pump_configuration();
-} */
 void time_sync_notification_cb(struct timeval *tv)
 {
     ESP_LOGI(TAG, "Notification of a time synchronization event");
@@ -204,6 +212,32 @@ static void initialize_sntp(void)
     sntp_set_time_sync_notification_cb(time_sync_notification_cb);
     sntp_init();
 }
+void check_time()
+{
+    int status = sntp_get_sync_status();
+    ESP_LOGI(TAG, "SNTP sync status: %i", status);
+    time_t now;
+    char strftime_buf[64];
+    struct tm timeinfo;
+    time(&now);
+    localtime_r(&now, &timeinfo);
+    strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+    ESP_LOGI(TAG, "The current date/time in Paris is: %s", strftime_buf);
+}
+
+void manage_switcher(cron_job *job)
+{
+    check_time();
+    int duration = 500; // un quart d'heure
+    ESP_LOGI(TAG, "Opening gpio...");
+    gpio_set_level(GPIO_OUTPUT, true);
+    vTaskDelay(duration / portTICK_PERIOD_MS);
+    gpio_set_level(GPIO_OUTPUT, false);
+    ESP_LOGI(TAG, "Closing gpio...");
+    ESP_LOGI(TAG, "Next execution is: ");
+    print_time(job->next_execution);
+    return;
+}
 
 void app_main(void)
 {
@@ -224,18 +258,48 @@ void app_main(void)
     ESP_ERROR_CHECK(example_connect());
     vTaskDelay(2000 / portTICK_RATE_MS);
 
+    //################################ Time #################################
+
+    ESP_LOGI(TAG, "Setting clock...");
+    sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    sntp_setservername(0, "pool.ntp.org");
+    sntp_init();
+    while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET)
+    {
+        ESP_LOGI(TAG, "Waiting for system time to be set...");
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+    }
+
+    ESP_LOGI(TAG, "Setting time zone...");
+    setenv("TZ", "<-03>3", 1);
+    tzset();
+    check_time();
+
     //################################ FILESYSTEM ################################
     filesystem_init();
 
     //################################ WEBSERVER #################################
 
     start_webserver();
-    vTaskDelay(5000 / portTICK_RATE_MS);
+    vTaskDelay(2000 / portTICK_RATE_MS);
 
+    //################################ CRON #################################
+
+    ESP_LOGI(TAG, "Setting cron job...");
+    cron_job *jobs[2];
+
+    jobs[0] = cron_job_create("*/100 * * * * *", manage_switcher, (void *)0);
+    // jobs[1] = cron_job_create("0 0 8 * * *", manage_switcher, (void *)0);
+
+    ESP_LOGI(TAG, "Starting cron job...");
+    cron_start();
+
+    vTaskDelay((1000 * 10000) / portTICK_PERIOD_MS); // This is just to emulate a delay between the calls
+    ESP_LOGI(TAG, "Pass for delay...");
     //################################ TASKS #################################
     //xTaskCreate(&pump_task, "pump_task", 2048, NULL, 5, NULL);
     //xTaskCreate(&tds_task, "tds_task", 2048, NULL, 5, NULL);
     // xTaskCreate(&DHT_task, "DHT_task", 4096, NULL, 5, NULL);
     //xTaskCreate(&PH_Task, "PH_Task", 2048, NULL, 5, NULL);
-    xTaskCreate(&task_manager, "task_manager", 10096, NULL, 5, NULL);
+    //xTaskCreate(&task_manager, "task_manager", 10096, NULL, 5, NULL);
 }
