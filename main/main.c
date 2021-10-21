@@ -30,6 +30,7 @@
 #include "esp_sntp.h"
 #include "driver/gpio.h"
 #include "cron.h"
+#include "database.h"
 
 #define MAX_HTTP_RECV_BUFFER 512
 #define MAX_HTTP_OUTPUT_BUFFER 2048
@@ -202,6 +203,13 @@ void app_main(void)
     start_webserver();
     vTaskDelay(2000 / portTICK_RATE_MS);
 
+    //################################ SQLITE #################################
+    /* database_init();
+    db_create("CREATE TABLE task (id INTEGER, content);");
+    db_insert("INSERT INTO task VALUES (1, 'Hello, World from test2');");
+    db_insert("INSERT INTO task VALUES (2, 'Hello, World from test3');");
+    db_select(" SELECT * FROM task "); */
+
     //################################ CRON #################################
     // // gpio
     ESP_LOGI(TAG, "Setting gpio...");
@@ -211,7 +219,9 @@ void app_main(void)
     ESP_LOGI(TAG, "Setting cron job...");
     cron_job *jobs[2];
 
-    jobs[0] = cron_job_create("*/100 * * * * *", manage_switcher, (void *)0);
+    char TEST[] = "*/100 * * * * *";
+
+    jobs[0] = cron_job_create(TEST, manage_switcher, (void *)0);
     // jobs[1] = cron_job_create("0 0 8 * * *", manage_switcher, (void *)0);
 
     ESP_LOGI(TAG, "Starting cron job...");
