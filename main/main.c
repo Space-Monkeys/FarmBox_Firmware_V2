@@ -144,15 +144,9 @@ void check_time()
     ESP_LOGI(TAG, "The current date/time in Brazil is: %s", strftime_buf);
 }
 
-void manage_switcher(cron_job *job)
+void manage_pump(cron_job *job)
 {
-    check_time();
-    int duration = 5000000; // un quart d'heure
-    ESP_LOGI(TAG, "Opening gpio...");
-    gpio_set_level(GPIO_OUTPUT, true);
-    vTaskDelay(duration / portTICK_PERIOD_MS);
-    gpio_set_level(GPIO_OUTPUT, false);
-    ESP_LOGI(TAG, "Closing gpio...");
+    ESP_LOGI(TAG, "Disabling pump...");
     ESP_LOGI(TAG, "Next execution is: ");
     print_time(job->next_execution);
     return;
@@ -203,22 +197,35 @@ void app_main(void)
     vTaskDelay(2000 / portTICK_RATE_MS);
 
     //################################ CRON #################################
-    // // gpio
-    ESP_LOGI(TAG, "Setting gpio...");
-    gpio_pad_select_gpio(GPIO_OUTPUT);
-    gpio_set_direction(GPIO_OUTPUT, GPIO_MODE_OUTPUT);
 
-    ESP_LOGI(TAG, "Setting cron job...");
+    // jobs[1] = cron_job_create("0 0 8 * * *", manage_switcher, (void *)0);
+
+    //################################ TASKS #####################################
+    cJSON *json_task = NULL;
+    cJSON *pump_json = NULL;
+    const char *pump_char = NULL;
+    char *taks = NULL;
     cron_job *jobs[2];
 
-    jobs[0] = cron_job_create("*/100 * * * * *", manage_switcher, (void *)0);
-    // jobs[1] = cron_job_create("0 0 8 * * *", manage_switcher, (void *)0);
+    taks = readFile("/spiffs/tasks/main.json");
+    json_task = cJSON_Parse(taks);
+
+    if (json_task == NULL)
+    {
+        ESP_LOGE(TAG, "Não foi possivel montar o json");
+        return;
+    }
+    pump_json = cJSON_GetObjectItemCaseSensitive(json_task, "pump");
+    if (pump_json != NULL && cJSON_IsString(pump_json))
+    {
+        pump_char = pump_json->valuestring;
+        ESP_LOGI(TAG, "Setting cron job for pump task...");
+        jobs[0] = cron_job_create(pump_char, pump_actions, (void *)0); //TODO: Remember to limit when setting the time the pump is on to never be greater than the task time
+    }
 
     ESP_LOGI(TAG, "Starting cron job...");
     cron_start();
 
-    vTaskDelay((1000 * 10000) / portTICK_PERIOD_MS); // This is just to emulate a delay between the calls
-    ESP_LOGI(TAG, "Pass for delay...");
     //################################ TASKS #################################
     //xTaskCreate(&pump_task, "pump_task", 2048, NULL, 5, NULL);
     //xTaskCreate(&tds_task, "tds_task", 2048, NULL, 5, NULL);
