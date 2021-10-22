@@ -28,7 +28,6 @@ void pump_actions()
         pump_config_json = pump_config_str_interval->valuestring;
         pump_activation_interval = atoi(pump_config_json);
     }
-    printf("%d", pump_activation_interval);
 
     ESP_LOGI(WATER_PUMP, "Setting gpio of pump...");
     gpio_pad_select_gpio(PUMP_GPIO);
@@ -36,6 +35,8 @@ void pump_actions()
     activate_pump(1, PUMP_GPIO);
     vTaskDelay(pump_activation_interval / portTICK_PERIOD_MS);
     activate_pump(0, PUMP_GPIO);
+    pump_config_json = NULL;
+    pump_config_str_interval = NULL;
 }
 
 void activate_pump(int pump_status, int pump_gpio_num)
