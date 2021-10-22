@@ -20,6 +20,7 @@
 #include "protocol_examples_common.h"
 #include "esp_crt_bundle.h"
 #include "tds_sensor.h"
+#include "lights.h"
 #include "DHT22.h"
 #include "ph_sensor.h"
 #include "webserver.h"
@@ -202,8 +203,8 @@ void app_main(void)
 
     //################################ TASKS #####################################
     cJSON *json_task = NULL;
-    cJSON *pump_json = NULL;
-    const char *pump_char = NULL;
+    cJSON *json_value = NULL;
+    const char *value_char = NULL;
     char *taks = NULL;
     cron_job *jobs[2];
 
@@ -215,12 +216,24 @@ void app_main(void)
         ESP_LOGE(TAG, "Não foi possivel montar o json");
         return;
     }
-    pump_json = cJSON_GetObjectItemCaseSensitive(json_task, "pump");
-    if (pump_json != NULL && cJSON_IsString(pump_json))
+    json_value = cJSON_GetObjectItemCaseSensitive(json_task, "pump");
+    if (json_value != NULL && cJSON_IsString(json_value))
     {
-        pump_char = pump_json->valuestring;
+        value_char = json_value->valuestring;
         ESP_LOGI(TAG, "Setting cron job for pump task...");
-        jobs[0] = cron_job_create(pump_char, pump_actions, (void *)0); //TODO: Remember to limit when setting the time the pump is on to never be greater than the task time
+        jobs[0] = cron_job_create(value_char, pump_actions, (void *)0); //TODO: Remember to limit when setting the time the pump is on to never be greater than the task time
+        value_char = NULL;
+        json_value = NULL;
+    }
+
+    json_value = cJSON_GetObjectItemCaseSensitive(json_task, "ligths");
+    if (json_value != NULL && cJSON_IsString(json_value))
+    {
+        value_char = json_value->valuestring;
+        ESP_LOGI(TAG, "Setting cron job for ligths task...");
+        jobs[1] = cron_job_create(value_char, light_actions, (void *)0); //TODO: Remember to limit when setting the time the pump is on to never be greater than the task time
+        value_char = NULL;
+        json_value = NULL;
     }
 
     ESP_LOGI(TAG, "Starting cron job...");
