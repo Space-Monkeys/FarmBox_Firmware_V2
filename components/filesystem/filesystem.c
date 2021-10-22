@@ -107,12 +107,12 @@ char *readFile(char *filepath)
 
         /* confirm we have read the file by outputing it to the console */
         //  printf("The file called contains this text\n\n%s", buffer);
+
         return buffer;
 
         //ESP_LOGE(TAG_FILESYSTEM, "%s", buffer);
 
         /* free the memory we used for the buffer */
-        free(buffer);
     }
     else
     {
@@ -121,7 +121,7 @@ char *readFile(char *filepath)
     }
 }
 
-void writeFile(char *filepath, char *file_data)
+int writeFile(char *filepath, char *file_data)
 {
     // First create a file.
     ESP_LOGI(TAG_FILESYSTEM, "Opening file");
@@ -129,11 +129,12 @@ void writeFile(char *filepath, char *file_data)
     if (f == NULL)
     {
         ESP_LOGE(TAG_FILESYSTEM, "Failed to open file for writing");
-        return;
+        return 0;
     }
     fprintf(f, file_data);
     fclose(f);
     ESP_LOGI(TAG_FILESYSTEM, "File written");
+    return 1;
 }
 void editFile(char *filepath, char *json_key, char *json_key_data)
 {
