@@ -239,8 +239,6 @@ void app_main(void)
     ESP_LOGI(TAG, "Starting cron job...");
     cron_start();
 
-    vTaskDelay(20000000000 / portTICK_RATE_MS);
-
     //################################ TASKS #################################
     //xTaskCreate(&pump_task, "pump_task", 2048, NULL, 5, NULL);
     //xTaskCreate(&tds_task, "tds_task", 2048, NULL, 5, NULL);
