@@ -19,7 +19,7 @@
 #define TDS_STABILISATION_DELAY 10 //(int) How long to wait (in seconds) after enabling sensor before taking a reading
 #define TDS_NUM_SAMPLES 10         //(int) Number of reading to take for an average   //(int) Sample period (delay between samples == sample period / number of readings)
 #define TDS_TEMPERATURE 25.0       //(float) Temperature of water (we should measure this with a sensor to get an accurate reading)
-#define TDS_VREF 5.0               //(float) Voltage reference for ADC. We should measure the actual value of each ESP32
+#define TDS_VREF 3.3               //(float) Voltage reference for ADC. We should measure the actual value of each ESP32
 
 static const char *TDS = "TDS INFO";
 
@@ -32,7 +32,7 @@ void expose_vref()
 
 void config_pins()
 {
-    ESP_LOGI(TDS, "Configure pins required for TDS sensor.");
+    /*    ESP_LOGI(TDS, "Configure pins required for TDS sensor."); */
     // Pin to power the TDS sensor
     gpio_pad_select_gpio(TDS_ENABLE_GPIO);
     gpio_set_direction(TDS_ENABLE_GPIO, GPIO_MODE_OUTPUT);
@@ -71,7 +71,7 @@ float read_tds_sensor(int numSamples, float sampleDelay)
     }
 
     float tdsAverage = runningSampleValue / numSamples;
-    ESP_LOGI(TDS, "Calculated average = %f", tdsAverage);
+    /*     ESP_LOGI(TDS, "Calculated average = %f", tdsAverage); */
     return tdsAverage;
 }
 
@@ -80,17 +80,16 @@ float convert_to_ppm(float analogReading)
     ESP_LOGI(TDS, "Converting an analog value to a TDS PPM value.");
     //https://www.dfrobot.com/wiki/index.php/Gravity:_Analog_TDS_Sensor_/_Meter_For_Arduino_SKU:_SEN0244#More_Documents
     float adcCompensation = 1 + (1 / 3.9);                                                                                                                                                 // 1/3.9 (11dB) attenuation.
-    float vPerDiv = (TDS_VREF / 4095) * adcCompensation;                                                                                                                                   // Calculate the volts per division using the VREF taking account of the chosen attenuation value.
+    float vPerDiv = (TDS_VREF / 4096) * adcCompensation;                                                                                                                                   // Calculate the volts per division using the VREF taking account of the chosen attenuation value.
     float averageVoltage = analogReading * vPerDiv;                                                                                                                                        // Convert the ADC reading into volts
     float compensationCoefficient = 1.0 + 0.02 * (TDS_TEMPERATURE - 25.0);                                                                                                                 //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
     float compensationVolatge = averageVoltage / compensationCoefficient;                                                                                                                  //temperature compensation
-    float tdsValue = (133.42 * compensationVolatge * compensationVolatge * compensationVolatge - 255.86 * compensationVolatge * compensationVolatge + 857.39 * compensationVolatge) * 0.5; //convert voltage value to tds value
-
-    ESP_LOGI(TDS, "Volts per division = %f", vPerDiv);
+    float tdsValue = (133.42 * compensationVolatge * compensationVolatge * compensationVolatge - 255.86 * compensationVolatge * compensationVolatge + 857.39 * compensationVolatge) * 0.5; //convert voltage value to tds value                                                                                                                                                              //
+                                                                                                                                                                                           /*   ESP_LOGI(TDS, "Volts per division = %f", vPerDiv);
     ESP_LOGI(TDS, "Average Voltage = %f", averageVoltage);
     ESP_LOGI(TDS, "Temperature (currently fixed, we should measure this) = %f", TDS_TEMPERATURE);
     ESP_LOGI(TDS, "Compensation Coefficient = %f", compensationCoefficient);
     ESP_LOGI(TDS, "Compensation Voltge = %f", compensationVolatge);
-    ESP_LOGI(TDS, "tdsValue = %f ppm", tdsValue);
+    ESP_LOGI(TDS, "tdsValue = %f ppm", tdsValue); */
     return tdsValue;
 }
