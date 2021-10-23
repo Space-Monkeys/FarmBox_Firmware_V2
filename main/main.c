@@ -53,23 +53,20 @@ int DHT_22_GPIO = 4;
 
 float sampleDelay = (TDS_SAMPLE_PERIOD / TDS_NUM_SAMPLES) * 1000;
 
-/* void tds_task(void *pvParameters)
+void tds_task(void *pvParameters)
 {
-    ESP_LOGI(TDS, "TDS Measurement Control Task: Starting");
-    while (1)
-    {
-        ESP_LOGI(TDS, "TDS Measurement Control Task: Read TDS Sensor");
-        enable_tds_sensor();
-        float sensorReading = read_tds_sensor(TDS_NUM_SAMPLES, sampleDelay);
-        float tdsResult = convert_to_ppm(sensorReading);
-        //    printf("TDS Reading = %f ppm\n", tdsResult);
-        ESP_LOGW(TDS, "TDS Reading = %f ppm\n", tdsResult);
-        disable_tds_sensor();
 
-        ESP_LOGI(TDS, "TDS Measurement Control Task: Sleeping 1 minute");
-        vTaskDelay(((1000 / portTICK_PERIOD_MS) * 1) * 1); //delay in minutes between measurements
-    }
-} */
+    ESP_LOGI(TDS, "TDS Measurement Control Task: Starting");
+    expose_vref();
+    config_pins();
+    enable_tds_sensor();
+    float sensorReading = read_tds_sensor(TDS_NUM_SAMPLES, sampleDelay);
+    float tdsResult = convert_to_ppm(sensorReading);
+    //    printf("TDS Reading = %f ppm\n", tdsResult);
+    ESP_LOGW(TDS, "TDS Reading = %f ppm\n", tdsResult);
+    disable_tds_sensor();
+    ESP_LOGI(TDS, "TDS Measurement Control Task: Sleeping 1 minute");
+}
 void print_time(time_t t)
 {
     char strftime_buf[64];
@@ -84,8 +81,8 @@ void DHT_task(void *pvParameter)
     ESP_LOGI(DHT_TAG, "Climatic Measurement Control Task: Read DHT22 Sensor");
     int ret = readDHT();
     errorHandler(ret); //TODO: #2 Add validation in the future when this is going to an api, Recursive function doesn't work, for some reason I have multiple returns and so the function is called multiple times ESP_LOGW(DHT_TAG, "Humidity: %.1f", getHumidity());
-    ESP_LOGW(DHT_TAG, "Humidity: %.1f", getHumidity());
-    ESP_LOGW(DHT_TAG, "Temperature: %.1f", getTemperature());
+    ESP_LOGI(DHT_TAG, "Humidity: %.1f", getHumidity());
+    ESP_LOGI(DHT_TAG, "Temperature: %.1f", getTemperature());
     /* 
         const char *BODY_DATA = "{ \"id\": 666, \"value\": 0}";
         post_request(API_FARMBOX_HOST, "/api/v3/conductivity", BODY_DATA); 
@@ -95,30 +92,13 @@ void PH_Task(void *pvParameter)
 {
     ESP_LOGI(PH_TAG, "Water Measurement Control Task: PH Sensor");
     config_ph_pins();
-    setDHTgpio(4);
     while (1)
     {
-
-        ESP_LOGI(PH_TAG, "Water Measurement Control Task: Reading PH Sensor....");
         float sensorReading = read_ph_sensor(25, 20);
-
-        ESP_LOGW(PH_TAG, "PH = %f", sensorReading);
-
-        int ret = readDHT();
-
-        errorHandler(ret);
-
-        ESP_LOGW(DHT_TAG, "Humidity: %.1f", getHumidity());
-        ESP_LOGW(DHT_TAG, "Temperature: %.1f", getTemperature());
-
-        float tds_sensor = read_tds_sensor(TDS_NUM_SAMPLES, sampleDelay);
-        float tdsResult = convert_to_ppm(tds_sensor);
-        //    printf("TDS Reading = %f ppm\n", tdsResult);
-        ESP_LOGW(TDS, "TDS Reading = %f ppm\n", tdsResult);
-
-        ESP_LOGI(PH_TAG, "Water Measurement Control Task: Sleeping 1 minute");
-        vTaskDelay(((1000 / portTICK_PERIOD_MS) * 1) * 1); //delay in minutes between measurements
+        ESP_LOGI(PH_TAG, "PH = %f", sensorReading);
     }
+    /*   float sensorReading = read_ph_sensor(25, 20);
+    ESP_LOGW(PH_TAG, "PH = %f", sensorReading); */
 }
 
 void check_time()
@@ -195,7 +175,7 @@ void app_main(void)
     cJSON *json_value = NULL;
     const char *value_char = NULL;
     char *taks = NULL;
-    cron_job *jobs[2];
+    cron_job *jobs[5];
 
     taks = readFile("/spiffs/tasks/main.json");
     ESP_LOGI(TAG, "%s", taks);
@@ -210,7 +190,6 @@ void app_main(void)
     if (json_value != NULL && cJSON_IsString(json_value))
     {
         value_char = json_value->valuestring;
-        ESP_LOGI(TAG, "Value for pump task: %s", value_char);
         ESP_LOGI(TAG, "Setting cron job for pump task...");
         jobs[0] = cron_job_create(value_char, pump_actions, (void *)0); //TODO: #3 Remember to limit when setting the time the pump is on to never be greater than the task time
         value_char = NULL;
@@ -221,9 +200,8 @@ void app_main(void)
     if (json_value != NULL && cJSON_IsString(json_value))
     {
         value_char = json_value->valuestring;
-        ESP_LOGI(TAG, "Value for ligths task: %s", value_char);
         ESP_LOGI(TAG, "Setting cron job for ligths task...");
-        jobs[1] = cron_job_create(value_char, light_actions, (void *)0); //TODO: Remember to limit when setting the time the pump is on to never be greater than the task time
+        jobs[1] = cron_job_create(value_char, light_actions, (void *)0);
         value_char = NULL;
         json_value = NULL;
     }
@@ -231,9 +209,27 @@ void app_main(void)
     if (json_value != NULL && cJSON_IsString(json_value))
     {
         value_char = json_value->valuestring;
-        ESP_LOGI(TAG, "Value for dht22 task: %s", value_char);
         ESP_LOGI(TAG, "Setting cron job for dht22 task...");
-        jobs[2] = cron_job_create(value_char, DHT_task, (void *)0); //TODO: Remember to limit when setting the time the pump is on to never be greater than the task time
+        jobs[2] = cron_job_create(value_char, DHT_task, (void *)0);
+        value_char = NULL;
+        json_value = NULL;
+    }
+
+    json_value = cJSON_GetObjectItemCaseSensitive(json_task, "tds_sensor");
+    if (json_value != NULL && cJSON_IsString(json_value))
+    {
+        value_char = json_value->valuestring;
+        ESP_LOGI(TAG, "Setting cron job for tds task...");
+        jobs[3] = cron_job_create(value_char, tds_task, (void *)0);
+        value_char = NULL;
+        json_value = NULL;
+    }
+    json_value = cJSON_GetObjectItemCaseSensitive(json_task, "ph_sensor");
+    if (json_value != NULL && cJSON_IsString(json_value))
+    {
+        value_char = json_value->valuestring;
+        ESP_LOGI(TAG, "Setting cron job for ph_sensor task...");
+        jobs[4] = cron_job_create(value_char, PH_Task, (void *)0);
         value_char = NULL;
         json_value = NULL;
     }
