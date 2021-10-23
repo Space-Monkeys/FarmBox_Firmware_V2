@@ -83,7 +83,7 @@ void DHT_task(void *pvParameter)
     setDHTgpio(DHT_22_GPIO);
     ESP_LOGI(DHT_TAG, "Climatic Measurement Control Task: Read DHT22 Sensor");
     int ret = readDHT();
-    errorHandler(ret);
+    errorHandler(ret); //TODO: #2 Add validation in the future when this is going to an api, Recursive function doesn't work, for some reason I have multiple returns and so the function is called multiple times ESP_LOGW(DHT_TAG, "Humidity: %.1f", getHumidity());
     ESP_LOGW(DHT_TAG, "Humidity: %.1f", getHumidity());
     ESP_LOGW(DHT_TAG, "Temperature: %.1f", getTemperature());
     /* 
@@ -212,7 +212,7 @@ void app_main(void)
         value_char = json_value->valuestring;
         ESP_LOGI(TAG, "Value for pump task: %s", value_char);
         ESP_LOGI(TAG, "Setting cron job for pump task...");
-        jobs[0] = cron_job_create(value_char, pump_actions, (void *)0); //TODO: Remember to limit when setting the time the pump is on to never be greater than the task time
+        jobs[0] = cron_job_create(value_char, pump_actions, (void *)0); //TODO: #3 Remember to limit when setting the time the pump is on to never be greater than the task time
         value_char = NULL;
         json_value = NULL;
     }
