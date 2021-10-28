@@ -53,7 +53,7 @@ float read_ph_sensor(int numSamples, float samplePeriod)
     {
         // Read analogue value
         int analogSample = adc1_get_raw(PH_ANALOG_GPIO);
-        //ESP_LOGI(PH_SENSOR, "Read analog value %d then sleep for %f milli seconds.", analogSample, sampleDelay);
+        ESP_LOGI(PH_SENSOR, "Read analog value %d then sleep for %f milli seconds.", analogSample, sampleDelay);
         runningSampleValue = runningSampleValue + analogSample;
         vTaskDelay(sampleDelay / portTICK_PERIOD_MS);
     }

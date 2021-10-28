@@ -51,21 +51,24 @@ const char *API_FARMBOX_HOST = "spacemonkeys.com.br";
 int API_FARMBOX_PORT = 8320;
 int DHT_22_GPIO = 4;
 
-float sampleDelay = (TDS_SAMPLE_PERIOD / TDS_NUM_SAMPLES) * 1000;
+float sampleDelay = (TDS_SAMPLE_PERIOD / TDS_NUM_SAMPLES) * 10;
 
 void tds_task(void *pvParameters)
 {
 
-    ESP_LOGI(TDS, "TDS Measurement Control Task: Starting");
-    expose_vref();
-    config_pins();
-    enable_tds_sensor();
-    float sensorReading = read_tds_sensor(TDS_NUM_SAMPLES, sampleDelay);
-    float tdsResult = convert_to_ppm(sensorReading);
-    //    printf("TDS Reading = %f ppm\n", tdsResult);
-    ESP_LOGW(TDS, "TDS Reading = %f ppm\n", tdsResult);
-    disable_tds_sensor();
-    ESP_LOGI(TDS, "TDS Measurement Control Task: Sleeping 1 minute");
+    while (1)
+    {
+        ESP_LOGI(TDS, "TDS Measurement Control Task: Starting");
+        expose_vref();
+        config_pins();
+        enable_tds_sensor();
+        float sensorReading = read_tds_sensor(TDS_NUM_SAMPLES, sampleDelay);
+        float tdsResult = convert_to_ppm(sensorReading);
+        //    printf("TDS Reading = %f ppm\n", tdsResult);
+        ESP_LOGW(TDS, "TDS Reading = %f ppm\n", tdsResult);
+        disable_tds_sensor();
+        ESP_LOGI(TDS, "TDS Measurement Control Task: Sleeping 1 minute");
+    }
 }
 void print_time(time_t t)
 {
@@ -171,7 +174,7 @@ void app_main(void)
     // jobs[1] = cron_job_create("0 0 8 * * *", manage_switcher, (void *)0);
 
     //################################ TASKS #####################################
-    cJSON *json_task = NULL;
+    /*     cJSON *json_task = NULL;
     cJSON *json_value = NULL;
     const char *value_char = NULL;
     char *taks = NULL;
@@ -235,12 +238,12 @@ void app_main(void)
     }
 
     ESP_LOGI(TAG, "Starting cron job...");
-    cron_start();
+    cron_start(); */
 
     //################################ TASKS #################################
     //xTaskCreate(&pump_task, "pump_task", 2048, NULL, 5, NULL);
-    //xTaskCreate(&tds_task, "tds_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&tds_task, "tds_task", 10096, NULL, 5, NULL);
     // xTaskCreate(&DHT_task, "DHT_task", 4096, NULL, 5, NULL);
-    //xTaskCreate(&PH_Task, "PH_Task", 2048, NULL, 5, NULL);
+    xTaskCreate(&PH_Task, "PH_Task", 10096, NULL, 5, NULL);
     //xTaskCreate(&task_manager, "task_manager", 10096, NULL, 5, NULL);
 }
