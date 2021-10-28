@@ -19,7 +19,7 @@
 #define TDS_STABILISATION_DELAY 10 //(int) How long to wait (in seconds) after enabling sensor before taking a reading
 #define TDS_NUM_SAMPLES 10         //(int) Number of reading to take for an average   //(int) Sample period (delay between samples == sample period / number of readings)
 #define TDS_TEMPERATURE 25.0       //(float) Temperature of water (we should measure this with a sensor to get an accurate reading)
-#define TDS_VREF 3.3               //(float) Voltage reference for ADC. We should measure the actual value of each ESP32
+#define TDS_VREF 1.2               //(float) Voltage reference for ADC. We should measure the actual value of each ESP32
 
 static const char *TDS = "TDS INFO";
 
